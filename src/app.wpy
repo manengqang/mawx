@@ -1,0 +1,103 @@
+<style lang="less">
+.container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+</style>
+
+<script>
+import wepy from 'wepy'
+import 'wepy-async-function'
+
+import { setStore } from 'wepy-redux'
+import configStore from './store'
+
+const store = configStore()
+setStore(store)
+
+export default class extends wepy.app {
+  config = {
+    pages: [
+      'pages/main/main'
+    ],
+    window: {
+      backgroundTextStyle: 'light',
+      navigationBarBackgroundColor: '#fff',
+      navigationBarTitleText: 'WeChat',
+      navigationBarTextStyle: 'black'
+    }
+  }
+
+  globalData = {
+    userInfo: null
+  }
+
+  constructor () {
+    super()
+    // 解决多请求并发
+    this.use('requestfix')
+  }
+
+  onLaunch() {
+    // 获取登录凭证，后台可根据code2Session解析获取openId与sessionKey
+    // openId用户的唯一标识
+    // sessionKey会话秘钥
+    // 5分钟时效
+    wepy.login({
+      success(res) {
+        let code = res.code
+
+        // 权限列表 ```{ 'scope.userInfo': true }```
+        wepy.getSetting({
+          success(res) {
+            if (res.authSetting['scope.userInfo']) {
+              // 已授权
+              // 可以获取用户信息`openId` `unionId` `头像信息`...
+              wepy.getUserInfo({
+                success(res) {
+                  WebApi.login({
+                    code,
+                    encryptedData,
+                    iv
+                  }).then(_d => {
+                    // 根据unionId或openId，判断用户是否已绑定
+                    // 根据unionId可以查看同一开放平台账号下的其他应用，该用户是否有注册过账号
+                    if (_d.openId) {
+                      // 返回绑定的用户信息
+                    } else {
+                      // 返回微信用户基础信息
+                      // 提示用户绑定账号
+                      // 发起了支付请求（提示-绑定手机号，并跳转到注册页面）
+                    }
+                  })
+                }
+              })
+            } else {
+              // 未授权，无法获取用户信息
+              // 跳转到授权页面，授权后，在执行操作
+              // ``` <button open-type="getUserInfo" @tap="getUserInfo" /> ```
+            }
+          }
+        })
+      }
+    })
+  }
+
+  getUserInfo(cb) {
+    const that = this
+    if (this.globalData.userInfo) {
+      return this.globalData.userInfo
+    }
+    wepy.getUserInfo({
+      success (res) {
+        that.globalData.userInfo = res.userInfo
+        cb && cb(res.userInfo)
+      }
+    })
+  }
+}
+</script>
